@@ -72,3 +72,14 @@ func TestClearHandler(t *testing.T) {
 	_, ok := clearHandler.(http.Handler)
 	assertEqual(t, ok, true)
 }
+
+func TestPurge(t *testing.T) {
+	Set(request, key2, "value2")
+	removedCount := Purge(0)
+	assertEqual(t, removedCount, 1)
+	assertEqual(t, len(GetAll(request)), 0)
+
+	Set(request, key1, "value1")
+	removedCount = Purge(10)
+	assertEqual(t, removedCount, 0)
+}

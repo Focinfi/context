@@ -2,15 +2,20 @@ package context
 
 import (
 	"net/http"
+	"time"
 )
 
-var data = make(map[*http.Request]map[interface{}]interface{})
+var (
+	data  = make(map[*http.Request]map[interface{}]interface{})
+	dataT = make(map[*http.Request]int64)
+)
 
 func Set(req *http.Request, key, value interface{}) {
 	if data[req] == nil {
 		data[req] = make(map[interface{}]interface{})
 	}
 	data[req][key] = value
+	dataT[req] = time.Now().Unix()
 }
 
 func Get(req *http.Request, key interface{}) interface{} {
@@ -48,6 +53,7 @@ func Delete(req *http.Request, key interface{}) {
 func Clear(req *http.Request) {
 	if _, ok := GetAllOk(req); ok {
 		delete(data, req)
+		delete(dataT, req)
 	}
 }
 
@@ -56,4 +62,20 @@ func ClearHandler(handler http.Handler) http.Handler {
 		defer Clear(req)
 		handler.ServeHTTP(rw, req)
 	})
+}
+
+func Purge(maxAge int) (count int) {
+	if maxAge <= 0 {
+		count = len(data)
+		data = make(map[*http.Request]map[interface{}]interface{})
+		dataT = make(map[*http.Request]int64)
+	} else {
+		for req := range data {
+			if time.Now().Unix() >= dataT[req]+int64(maxAge) {
+				Clear(req)
+				count++
+			}
+		}
+	}
+	return
 }
