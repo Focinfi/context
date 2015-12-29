@@ -2,15 +2,19 @@ package context
 
 import (
 	"net/http"
+	"sync"
 	"time"
 )
 
 var (
+	mux   sync.RWMutex
 	data  = make(map[*http.Request]map[interface{}]interface{})
 	dataT = make(map[*http.Request]int64)
 )
 
 func Set(req *http.Request, key, value interface{}) {
+	mux.Lock()
+	defer mux.Unlock()
 	if data[req] == nil {
 		data[req] = make(map[interface{}]interface{})
 	}
@@ -19,6 +23,8 @@ func Set(req *http.Request, key, value interface{}) {
 }
 
 func Get(req *http.Request, key interface{}) interface{} {
+	mux.RLock()
+	defer mux.RUnlock()
 	return data[req][key]
 }
 
@@ -30,6 +36,8 @@ func GetOk(req *http.Request, key interface{}) (val interface{}, ok bool) {
 }
 
 func GetAll(req *http.Request) map[interface{}]interface{} {
+	mux.RLock()
+	defer mux.RUnlock()
 	vals := make(map[interface{}]interface{})
 	for key := range data[req] {
 		vals[key] = data[req][key]
@@ -46,12 +54,16 @@ func GetAllOk(req *http.Request) (allVal map[interface{}]interface{}, ok bool) {
 
 func Delete(req *http.Request, key interface{}) {
 	if _, ok := GetOk(req, key); ok {
+		mux.Lock()
+		defer mux.Unlock()
 		delete(data[req], key)
 	}
 }
 
 func Clear(req *http.Request) {
 	if _, ok := GetAllOk(req); ok {
+		mux.Lock()
+		defer mux.Unlock()
 		delete(data, req)
 		delete(dataT, req)
 	}
@@ -67,8 +79,10 @@ func ClearHandler(handler http.Handler) http.Handler {
 func Purge(maxAge int) (count int) {
 	if maxAge <= 0 {
 		count = len(data)
+		mux.Lock()
 		data = make(map[*http.Request]map[interface{}]interface{})
 		dataT = make(map[*http.Request]int64)
+		mux.Unlock()
 	} else {
 		for req := range data {
 			if time.Now().Unix() >= dataT[req]+int64(maxAge) {
