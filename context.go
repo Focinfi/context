@@ -38,3 +38,22 @@ func GetAllOk(req *http.Request) (allVal map[interface{}]interface{}, ok bool) {
 	}
 	return
 }
+
+func Delete(req *http.Request, key interface{}) {
+	if _, ok := GetOk(req, key); ok {
+		delete(data[req], key)
+	}
+}
+
+func Clear(req *http.Request) {
+	if _, ok := GetAllOk(req); ok {
+		delete(data, req)
+	}
+}
+
+func ClearHandler(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		defer Clear(req)
+		handler.ServeHTTP(rw, req)
+	})
+}

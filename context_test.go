@@ -54,3 +54,21 @@ func TestGetAllOk(t *testing.T) {
 	assertEqual(t, len(allVal), 1)
 	assertEqual(t, ok, true)
 }
+
+func TestDelete(t *testing.T) {
+	Delete(request, key1)
+	allVal := GetAll(request)
+	assertEqual(t, len(allVal), 0)
+}
+
+func TestClear(t *testing.T) {
+	Clear(request)
+	_, ok := GetAllOk(request)
+	assertEqual(t, ok, false)
+}
+
+func TestClearHandler(t *testing.T) {
+	clearHandler := ClearHandler(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {}))
+	_, ok := clearHandler.(http.Handler)
+	assertEqual(t, ok, true)
+}
