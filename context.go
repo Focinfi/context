@@ -14,12 +14,12 @@ var (
 
 func Set(req *http.Request, key, value interface{}) {
 	mux.Lock()
-	defer mux.Unlock()
 	if data[req] == nil {
 		data[req] = make(map[interface{}]interface{})
 	}
 	data[req][key] = value
 	dataT[req] = time.Now().Unix()
+	mux.Unlock()
 }
 
 func Get(req *http.Request, key interface{}) interface{} {
@@ -55,17 +55,17 @@ func GetAllOk(req *http.Request) (allVal map[interface{}]interface{}, ok bool) {
 func Delete(req *http.Request, key interface{}) {
 	if _, ok := GetOk(req, key); ok {
 		mux.Lock()
-		defer mux.Unlock()
 		delete(data[req], key)
+		mux.Unlock()
 	}
 }
 
 func Clear(req *http.Request) {
 	if _, ok := GetAllOk(req); ok {
 		mux.Lock()
-		defer mux.Unlock()
 		delete(data, req)
 		delete(dataT, req)
+		mux.Unlock()
 	}
 }
 
